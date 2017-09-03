@@ -312,7 +312,6 @@ public class MainActivity extends AppCompatActivity {
                     if (outputStream != null)
                         outputStream.close();
 
-
                     //由最低层的线程逐步判断 一步一步的由下往上关闭线程
                     if (acceptThread.isInterrupted() == false){
                         if (acceptThread.getStopReceive() == false){
@@ -376,7 +375,6 @@ public class MainActivity extends AppCompatActivity {
 
         public AcceptThread() {
         }
-
 
         /**
          * 用于停止读取数据的阻塞操作
