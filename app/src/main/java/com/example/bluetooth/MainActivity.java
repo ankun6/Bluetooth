@@ -1,5 +1,6 @@
 package com.example.bluetooth;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -9,7 +10,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     public final static int MESSAGE_DATA = 0x01;
 
@@ -312,7 +312,6 @@ public class MainActivity extends AppCompatActivity {
                     if (outputStream != null)
                         outputStream.close();
 
-
                     //由最低层的线程逐步判断 一步一步的由下往上关闭线程
                     if (acceptThread.isInterrupted() == false){
                         if (acceptThread.getStopReceive() == false){
@@ -376,7 +375,6 @@ public class MainActivity extends AppCompatActivity {
 
         public AcceptThread() {
         }
-
 
         /**
          * 用于停止读取数据的阻塞操作
