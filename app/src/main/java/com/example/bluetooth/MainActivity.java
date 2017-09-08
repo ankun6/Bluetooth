@@ -1,5 +1,4 @@
 package com.example.bluetooth;
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -8,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Bundle;
@@ -163,8 +163,8 @@ public class MainActivity extends Activity {
                 arrayList.clear();
                 if (bluetoothSocket != null)
                     try {
-                        if (bluetoothSocket.isConnected())
-                            bluetoothSocket.close();
+                            if (bluetoothSocket.isConnected())
+                                bluetoothSocket.close();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -202,17 +202,17 @@ public class MainActivity extends Activity {
                         @Override
                         public void run() {
                             Log.d(TAG, "in  disconnect Thread ");
-                            if (bluetoothSocket.isConnected()) {
-                                try {
-                                    bluetoothSocket.close();
-                                    if (acceptThread.getStopReceive() == false)
-                                        acceptThread.setStopReceive(true);
-                                    inputStream = null;
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }// end of if
-                        }
+                                if (bluetoothSocket.isConnected()) {
+                                    try {
+                                        bluetoothSocket.close();
+                                        if (acceptThread.getStopReceive() == false)
+                                            acceptThread.setStopReceive(true);
+                                        inputStream = null;
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }// end of if
+                            }
                     }).start();
                 }
 
@@ -371,7 +371,6 @@ public class MainActivity extends Activity {
         private BufferedReader reader;
         private boolean stopReceive=true;
         private boolean state = true;
-
 
         public AcceptThread() {
         }
