@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
@@ -49,10 +50,10 @@ public class MainActivity extends Activity {
     private ArrayList<String> arrayList;
     private ArrayAdapter<String> arrayAdapter;
     private BluetoothAdapter bluetoothAdapter;
-    private BluetoothDevice bluetoothDevice;
-    private BluetoothSocket bluetoothSocket;
-    private OutputStream outputStream;
-    private InputStream inputStream;
+    private BluetoothDevice bluetoothDevice=null;
+    private BluetoothSocket bluetoothSocket=null;
+    private OutputStream outputStream=null;
+    private InputStream inputStream=null;
 
     private final String NAME = "Bluetooth_Socket";
 
@@ -205,9 +206,6 @@ public class MainActivity extends Activity {
                                 if (bluetoothSocket.isConnected()) {
                                     try {
                                         bluetoothSocket.close();
-                                        if (acceptThread.getStopReceive() == false)
-                                            acceptThread.setStopReceive(true);
-                                        inputStream = null;
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }
@@ -222,12 +220,12 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         try {
+                            Log.d(TAG, "in  connect Thread ");
                             //获得设备
                             bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(uuid);
                             bluetoothSocket.connect();
                             outputStream = bluetoothSocket.getOutputStream();
                             inputStream = bluetoothSocket.getInputStream();
-                            acceptThread.setStopReceive(false);
 
                             //在主线程中显示连接成功提示信息
                             runOnUiThread(new Runnable() {
@@ -312,15 +310,8 @@ public class MainActivity extends Activity {
                     if (outputStream != null)
                         outputStream.close();
 
-                    //由最低层的线程逐步判断 一步一步的由下往上关闭线程
                     if (acceptThread.isInterrupted() == false){
-                        if (acceptThread.getStopReceive() == false){
-                            acceptThread.setRunningState(false);
-                        }else {
-                            acceptThread.setStopReceive(true);
-                            inputStream = null;
-                            acceptThread.setRunningState(false);
-                        }
+                        acceptThread.stopThread();
                     }
 
                 }catch (IOException e){
@@ -343,22 +334,24 @@ public class MainActivity extends Activity {
         public void handleMessage(Message msg) {
             switch (msg.what){
                 //该消息附带接收到的数据,用于更新UI显示
-                case MainActivity.MESSAGE_DATA:
+                case MainActivity.MESSAGE_DATA: {
                     final String data = msg.obj.toString();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             Log.d(TAG, "更新textView显示!");
-                            textViewShowData.append(data+"\n");
-                            int offset=textViewShowData.getLineCount()*textViewShowData.getLineHeight();
+                            textViewShowData.append(data);
+                            int offset = textViewShowData.getLineCount() * textViewShowData.getLineHeight();
                             if (offset > textViewShowData.getHeight()) {
-                                textViewShowData.scrollTo(0,offset - textViewShowData.getHeight());
-                            }else {
+                                textViewShowData.scrollTo(0, offset - textViewShowData.getHeight());
+                            } else {
                                 textViewShowData.scrollTo(0, 0);
                             }
                         }
                     });
                     break;
+                }//end of case
+
                 default:break;
             }
         }
@@ -367,80 +360,32 @@ public class MainActivity extends Activity {
     // 服务端接收信息线程
     private class AcceptThread extends Thread {
 
-        private String line;
-        private BufferedReader reader;
-        private boolean stopReceive=true;
-        private boolean state = true;
+        private Boolean isStop = false;
+        private byte[] buf = new byte[128];
+        private int len=0;
 
         public AcceptThread() {
         }
 
-        /**
-         * 用于停止读取数据的阻塞操作
-         * @param state
-         */
-        public void setStopReceive(boolean state){
-            this.stopReceive = state;
-        }
-
-        /**
-         * 获取当前接收数据的状态
-         * @return true: 已经停止, false:未停止
-         */
-        public boolean getStopReceive(){
-            return this.stopReceive;
-        }
-
-        /**
-         * 用于设置当前线程的运行状态,可以用来结束while循环
-         * @param state
-         */
-        public void setRunningState(boolean state){
-            this.state = state;
-        }
-
-        /**
-         * 获得当前线程的运行状态
-         * @return
-         */
-        public boolean getRunningState(){
-            return this.state;
+        public void stopThread(){
+            isStop = true;
         }
 
         public void run() {
-
-            //其他线程未设置state, 则一直循环检测
-            while (state){
-                if (inputStream != null){
-                    reader = new BufferedReader(new InputStreamReader(inputStream));
-                    Log.d(TAG, "开始接收...");
+            while (!isStop){
+                while (inputStream != null)
                     try {
-                        // 注意:使用readLine方法,接收到的消息必须以回车结束,否则阻塞 所以可以用break来结束这个循环,获得接收到的消息带回车符
-                        while ((line=reader.readLine()) != null){
-                            Log.d(TAG, line);
-
-                            //发送消息,附带接受到的数据,用于更新UI显示
-                            Message msg = new Message();
-                            msg.what = MainActivity.MESSAGE_DATA;
-                            msg.obj = line;
-                            myHandler.sendMessage(msg);
-
-                            //在外界可以设置stopReceive为true, 中断该阻塞读的操作
-                            if (stopReceive == false)
-                                break;
-                        }
+                        len = inputStream.read(buf);
+                        Message msg = Message.obtain();
+                        msg.what = MainActivity.MESSAGE_DATA;
+                        Bundle bundle = new Bundle();
+                        msg.obj = new String(buf, 0, len);
+                        myHandler.sendMessage(msg);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }else {
-                    Log.d(TAG, "空循环...");
-                    try {
-                        sleep(1000); //本线程睡眠1秒,等待获得输入流后,继续进行读去数据的操作
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
                 }
-            }//end of while(state)
+
         }//end of while run()
     }// end of private class AcceptThread extends Thread {
 }
